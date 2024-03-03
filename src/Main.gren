@@ -68,50 +68,107 @@ main =
 update : Computer -> Model -> Model
 update computer model =
     let
-        greenHit =
-            checkHit model.board model.greenBall
+        newGreen =
+            { ball = model.greenBall, board = model.board }
+                -- Move x and y separately since it's the easiest way to see if a
+                -- collision happened on a side or on the top/bottom, which we need to
+                -- know to change the x or y direction appropriately.
+                |> moveBallX
+                |> moveBallY
 
-        blackHit =
-            checkHit greenHit.board model.blackBall
+        newBlack =
+            { ball = model.blackBall, board = newGreen.board }
+                |> moveBallX
+                |> moveBallY
     in
     { model
-        | board = blackHit.board
-        , greenBall = greenHit.ball |> moveBall
-        , blackBall = blackHit.ball |> moveBall
+        | board = newBlack.board
+        , greenBall = newGreen.ball
+        , blackBall = newBlack.ball
     }
 
-checkHit : Array Brick -> Ball -> { board : Array Brick, ball : Ball }
-checkHit board ball =
+moveBallX : { ball : Ball, board : Array Brick } -> { ball : Ball, board : Array Brick }
+moveBallX { ball, board } =
     let
+        nextX = 
+            ball.x + (ball.dx * ballSpeed)
+        
+        newBall =
+            if nextX > (maxX * squareSize) || nextX < (minX * squareSize) then
+                { ball | x = ball.x, dx = -ball.dx }
+            else
+                { ball | x = nextX, dx = ball.dx }
+
         hitBricks =
             board
                 |> Array.filter
                     (\brick ->
-                        ball.color == brick.color &&
-                        ball.x < brick.x + squareSize &&
-                        ball.x + squareSize > brick.x &&
-                        ball.y < brick.y + squareSize &&
-                        ball.y + squareSize > brick.y
+                        newBall.color == brick.color &&
+                        newBall.x < brick.x + squareSize &&
+                        newBall.x + squareSize > brick.x &&
+                        newBall.y < brick.y + squareSize &&
+                        newBall.y + squareSize > brick.y
                     )
-    in
-    case hitBricks of
-        [] ->
-            { ball = ball
-            , board = board
-            }
 
-        bricks ->
-            { ball = { ball | dx = -ball.dx }
-            , board =
-                board
-                    |> Array.map
-                        (\b ->
-                            if Array.member b bricks then
-                                { b | color = swapColor b.color }
-                            else
-                                b
-                        )
-            }
+        newDx =
+            if hitBricks == [] then
+                newBall.dx
+            else
+                -newBall.dx
+
+        newBoard =
+            Array.map (swapColorIfHit hitBricks) board
+    in
+    { ball =
+        { newBall | dx = newDx }
+    , board =
+        newBoard
+    }
+
+moveBallY : { ball : Ball, board : Array Brick } -> { ball : Ball, board : Array Brick }
+moveBallY { ball, board } =
+    let
+        nextY = 
+            ball.y + (ball.dy * ballSpeed)
+        
+        newBall =
+            if nextY > (maxY * squareSize) || nextY < (minY * squareSize) then
+                { ball | y = ball.y, dy = -ball.dy }
+            else
+                { ball | y = nextY, dy = ball.dy }
+
+        hitBricks =
+            board
+                |> Array.filter
+                    (\brick ->
+                        newBall.color == brick.color &&
+                        newBall.x < brick.x + squareSize &&
+                        newBall.x + squareSize > brick.x &&
+                        newBall.y < brick.y + squareSize &&
+                        newBall.y + squareSize > brick.y
+                    )
+
+        newDy =
+            if hitBricks == [] then
+                newBall.dy
+            else
+                -newBall.dy
+
+        newBoard =
+            Array.map (swapColorIfHit hitBricks) board
+    in
+    { ball =
+        { newBall | dy = newDy }
+    , board =
+        newBoard
+    }
+
+swapColorIfHit : Array Brick -> Brick -> Brick
+swapColorIfHit hitBricks brick =
+    if Array.member brick hitBricks then
+        { brick | color = swapColor brick.color }
+    else
+        brick
 
 swapColor : Color -> Color
 swapColor color =
