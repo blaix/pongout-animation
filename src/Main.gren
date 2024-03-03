@@ -1,11 +1,16 @@
 module Main exposing (main)
 
+import Math exposing (round)
 import Playground exposing (..)
 
 type alias Model =
     { greenBall : Ball
     , blackBall : Ball
     , board : Array Brick
+    , maxCol : Float
+    , maxRow : Float
+    , minCol : Float
+    , minRow : Float
     }
 
 type alias Ball =
@@ -23,11 +28,7 @@ type alias Brick =
     }
 
 squareSize = 20
-ballSpeed = 3
-maxX = 30
-minX = -30
-maxY = 15
-minY = -15
+ballSpeed = 5
 
 main =
     game view update 
@@ -45,11 +46,58 @@ main =
             , dx = -1
             , dy = -1
             }
+        , board = []
+        , maxCol = 0
+        , minCol = 0
+        , maxRow = 0
+        , minRow = 0
+        }
+
+update : Computer -> Model -> Model
+update computer model =
+    if model.board == [] then
+        init computer model
+    else
+        let
+            newGreen =
+                { ball = model.greenBall, board = model.board }
+                    -- Move x and y separately since it's the easiest way to see if a
+                    -- collision happened on a side or on the top/bottom, which we need to
+                    -- know to change the x or y direction appropriately.
+                    |> moveBallX model
+                    |> moveBallY model
+
+            newBlack =
+                { ball = model.blackBall, board = newGreen.board }
+                    |> moveBallX model
+                    |> moveBallY model
+        in
+        { model
+            | board = newBlack.board
+            , greenBall = newGreen.ball
+            , blackBall = newBlack.ball
+        }
+
+init : Computer -> Model -> Model
+init computer model =
+    let
+        cols = computer.screen.width / squareSize / 2
+        rows = computer.screen.height / squareSize / 2
+        maxCol = cols
+        maxRow = rows
+        minCol = -cols
+        minRow = -rows
+    in
+    { model
+        | maxCol = cols
+        , maxRow = rows
+        , minCol = -cols
+        , minRow = -rows
         , board =
-            Array.range minX maxX
+            Array.range (round minCol) (round maxCol)
                 |> Array.map
                     (\x ->
-                        Array.range minY maxY
+                        Array.range (round minRow) (round maxRow)
                             |> Array.map
                                 (\y ->
                                     { x = x * squareSize |> toFloat
@@ -65,36 +113,14 @@ main =
                 |> Array.flatten
         }
 
-update : Computer -> Model -> Model
-update computer model =
-    let
-        newGreen =
-            { ball = model.greenBall, board = model.board }
-                -- Move x and y separately since it's the easiest way to see if a
-                -- collision happened on a side or on the top/bottom, which we need to
-                -- know to change the x or y direction appropriately.
-                |> moveBallX
-                |> moveBallY
-
-        newBlack =
-            { ball = model.blackBall, board = newGreen.board }
-                |> moveBallX
-                |> moveBallY
-    in
-    { model
-        | board = newBlack.board
-        , greenBall = newGreen.ball
-        , blackBall = newBlack.ball
-    }
-
-moveBallX : { ball : Ball, board : Array Brick } -> { ball : Ball, board : Array Brick }
-moveBallX { ball, board } =
+moveBallX : Model -> { ball : Ball, board : Array Brick } -> { ball : Ball, board : Array Brick }
+moveBallX model { ball, board } =
     let
         nextX = 
             ball.x + (ball.dx * ballSpeed)
         
         newBall =
-            if nextX > (maxX * squareSize) || nextX < (minX * squareSize) then
+            if nextX > (model.maxCol * squareSize) || nextX < (model.minCol * squareSize) then
                 { ball | x = ball.x, dx = -ball.dx }
             else
                 { ball | x = nextX, dx = ball.dx }
@@ -125,14 +151,14 @@ moveBallX { ball, board } =
         newBoard
     }
 
-moveBallY : { ball : Ball, board : Array Brick } -> { ball : Ball, board : Array Brick }
-moveBallY { ball, board } =
+moveBallY : Model -> { ball : Ball, board : Array Brick } -> { ball : Ball, board : Array Brick }
+moveBallY model { ball, board } =
     let
         nextY = 
             ball.y + (ball.dy * ballSpeed)
         
         newBall =
-            if nextY > (maxY * squareSize) || nextY < (minY * squareSize) then
+            if nextY > (model.maxRow * squareSize) || nextY < (model.minRow * squareSize) then
                 { ball | y = ball.y, dy = -ball.dy }
             else
                 { ball | y = nextY, dy = ball.dy }
@@ -177,31 +203,6 @@ swapColor color =
     else
         green
 
-moveBall : Ball -> Ball
-moveBall ball =
-    let
-        nextX = ball.x + (ball.dx * ballSpeed)
-        nextY = ball.y + (ball.dy * ballSpeed)
-
-        newX =
-            if nextX > (maxX * squareSize) || nextX < (minX * squareSize) then
-                { x = ball.x, dx = -ball.dx }
-            else
-                { x = nextX, dx = ball.dx }
-
-        newY =
-            if nextY > (maxY * squareSize) || nextY < (minY * squareSize) then
-                { y = ball.y, dy = -ball.dy }
-            else
-                { y = nextY, dy = ball.dy }
-    in
-    { ball
-        | x = newX.x
-        , y = newY.y
-        , dx = newX.dx
-        , dy = newY.dy
-    }
-
 view : Computer -> Model -> Array Shape
 view computer model =
     drawBoard model.board ++
@@ -221,6 +222,6 @@ drawBrick brick =
 
 drawBall : Ball -> Shape
 drawBall ball =
-    square ball.color squareSize
+    circle ball.color (squareSize / 2)
         |> moveX ball.x
         |> moveY ball.y
