@@ -1,0 +1,169 @@
+module Main exposing (main)
+
+import Playground exposing (..)
+
+type alias Model =
+    { greenBall : Ball
+    , blackBall : Ball
+    , board : Array Brick
+    }
+
+type alias Ball =
+    { x : Float
+    , y : Float
+    , dx : Float
+    , dy : Float
+    , color: Color
+    }
+
+type alias Brick =
+    { x : Float
+    , y : Float
+    , color: Color
+    }
+
+squareSize = 20
+ballSpeed = 3
+maxX = 30
+minX = -30
+maxY = 15
+minY = -15
+
+main =
+    game view update 
+        { greenBall = 
+            { color = green 
+            , x = -15 * squareSize
+            , y = -10 * squareSize
+            , dx = 1
+            , dy = 1
+            }
+        , blackBall =
+            { color = black
+            , x = 15 * squareSize
+            , y = 10 * squareSize
+            , dx = -1
+            , dy = -1
+            }
+        , board =
+            Array.range minX maxX
+                |> Array.map
+                    (\x ->
+                        Array.range minY maxY
+                            |> Array.map
+                                (\y ->
+                                    { x = x * squareSize |> toFloat
+                                    , y = y * squareSize |> toFloat
+                                    , color =
+                                        if x < 0 then
+                                            black
+                                        else
+                                            green
+                                    }
+                                )
+                    )
+                |> Array.flatten
+        }
+
+update : Computer -> Model -> Model
+update computer model =
+    let
+        greenHit =
+            checkHit model.board model.greenBall
+
+        blackHit =
+            checkHit greenHit.board model.blackBall
+    in
+    { model
+        | board = blackHit.board
+        , greenBall = greenHit.ball |> moveBall
+        , blackBall = blackHit.ball |> moveBall
+    }
+
+checkHit : Array Brick -> Ball -> { board : Array Brick, ball : Ball }
+checkHit board ball =
+    let
+        hitBricks =
+            board
+                |> Array.filter
+                    (\brick ->
+                        ball.color == brick.color &&
+                        ball.x < brick.x + squareSize &&
+                        ball.x + squareSize > brick.x &&
+                        ball.y < brick.y + squareSize &&
+                        ball.y + squareSize > brick.y
+                    )
+    in
+    case hitBricks of
+        [] ->
+            { ball = ball
+            , board = board
+            }
+
+        bricks ->
+            { ball = { ball | dx = -ball.dx }
+            , board =
+                board
+                    |> Array.map
+                        (\b ->
+                            if Array.member b bricks then
+                                { b | color = swapColor b.color }
+                            else
+                                b
+                        )
+            }
+
+swapColor : Color -> Color
+swapColor color =
+    if color == green then
+        black
+    else
+        green
+
+moveBall : Ball -> Ball
+moveBall ball =
+    let
+        nextX = ball.x + (ball.dx * ballSpeed)
+        nextY = ball.y + (ball.dy * ballSpeed)
+
+        newX =
+            if nextX > (maxX * squareSize) || nextX < (minX * squareSize) then
+                { x = ball.x, dx = -ball.dx }
+            else
+                { x = nextX, dx = ball.dx }
+
+        newY =
+            if nextY > (maxY * squareSize) || nextY < (minY * squareSize) then
+                { y = ball.y, dy = -ball.dy }
+            else
+                { y = nextY, dy = ball.dy }
+    in
+    { ball
+        | x = newX.x
+        , y = newY.y
+        , dx = newX.dx
+        , dy = newY.dy
+    }
+
+view : Computer -> Model -> Array Shape
+view computer model =
+    drawBoard model.board ++
+        [ drawBall model.greenBall
+        , drawBall model.blackBall
+        ]
+
+drawBoard : Array Brick -> Array Shape
+drawBoard board =
+    Array.map drawBrick board
+
+drawBrick : Brick -> Shape
+drawBrick brick =
+    square brick.color squareSize
+        |> moveX brick.x
+        |> moveY brick.y
+
+drawBall : Ball -> Shape
+drawBall ball =
+    square ball.color squareSize
+        |> moveX ball.x
+        |> moveY ball.y
