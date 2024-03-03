@@ -34,15 +34,15 @@ main =
     game view update 
         { greenBall = 
             { color = green 
-            , x = -15 * squareSize
-            , y = -10 * squareSize
+            , x = 0
+            , y = 0
             , dx = 1
             , dy = 1
             }
         , blackBall =
             { color = black
-            , x = 15 * squareSize
-            , y = 10 * squareSize
+            , x = 0
+            , y = 0
             , dx = -1
             , dy = -1
             }
@@ -89,7 +89,17 @@ init computer model =
         minRow = -rows
     in
     { model
-        | maxCol = cols
+        | greenBall =
+            { model.greenBall
+                | x = (minCol + 4) * squareSize
+                , y = 4 * squareSize
+            }
+        , blackBall =
+            { model.blackBall
+                | x = (maxCol - 4) * squareSize
+                , y = 4 * squareSize
+            }
+        , maxCol = cols
         , maxRow = rows
         , minCol = -cols
         , minRow = -rows
