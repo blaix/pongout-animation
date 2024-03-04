@@ -1,19 +1,11 @@
-# Nix Shell Template for Gren
+# Pong / Breakout animation
 
-This is a template to use [gren](https://gren-lang.org/)
-in an isolated [nix shell](https://nixos.wiki/wiki/Development_environment_with_nix-shell)
-that automatically loads with [direnv](https://direnv.net/).
+Written in [gren](https://gren-lang.org/) using [gren-playground](https://packages.gren-lang.org/package/blaix/gren-playground).
 
-## Requirements
+Run with:
 
-* [nix](https://nix.dev/install-nix.html)
-* [direnv](https://direnv.net/)
-* Optional but highly recommended: [nix-direnv](https://github.com/nix-community/nix-direnv)
-* Optional: [degit](https://github.com/Rich-Harris/degit) (otherwise just copy this repo however you want)
-
-## Usage
-
-1. `degit blaix/nix-shell-gren my-gren-project`
-2. `cd my-gren-project`
-3. `direnv allow`
-4. `gren init` 🎉
+```
+npm install
+npx gren make src/Main.gren
+open index.html
+```
