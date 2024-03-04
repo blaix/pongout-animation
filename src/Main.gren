@@ -64,12 +64,12 @@ update computer model =
                     -- Move x and y separately since it's the easiest way to see if a
                     -- collision happened on a side or on the top/bottom, which we need to
                     -- know to change the x or y direction appropriately.
-                    |> moveBallX model
+                    |> moveBallX model computer.probability
                     |> moveBallY model
 
             newBlack =
                 { ball = model.blackBall, board = newGreen.board }
-                    |> moveBallX model
+                    |> moveBallX model computer.probability
                     |> moveBallY model
         in
         { model
@@ -123,11 +123,11 @@ init computer model =
                 |> Array.flatten
         }
 
-moveBallX : Model -> { ball : Ball, board : Array Brick } -> { ball : Ball, board : Array Brick }
-moveBallX model { ball, board } =
+moveBallX : Model -> Float -> { ball : Ball, board : Array Brick } -> { ball : Ball, board : Array Brick }
+moveBallX model probability { ball, board } =
     let
         nextX = 
-            ball.x + (ball.dx * ballSpeed)
+            ball.x + (ball.dx * ballSpeed) + (ball.dx * probability * 2)
         
         newBall =
             if nextX > (model.maxCol * squareSize) || nextX < (model.minCol * squareSize) then
